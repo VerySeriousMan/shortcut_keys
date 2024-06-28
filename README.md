@@ -58,6 +58,7 @@
 
 - `settings/macros.json`: 存储宏命令及其操作。
 - `settings/keys.json`: 存储快捷键及其对应的宏命令。
+- `settings/.secret.toml`: 存储root用户密码与虚拟环境地址(Linux环境下需先配置)。
 
 ## 项目结构
 
@@ -66,7 +67,7 @@
 - **keys_insert.py**: 快捷键输入窗口的实现，用户可以在此窗口中添加新的快捷键和对应的宏命令。
 - **working_thread.py**: 工作线程的实现，用于在后台监听快捷键输入并执行相应的宏命令。
 - **utils.py**: 工具函数文件，包含读取和写入JSON文件的通用函数。
-- **settings**: 配置文件夹，包含存储快捷键与宏命令的JSON文件。
+- **settings**: 配置文件夹，包含存储快捷键与宏命令的JSON文件和存储Linux环境下root用户密码与虚拟环境地址。
 
 ## 贡献
 如果你有好的建议或发现了问题，欢迎提交 issue 或 pull request。

@@ -4,7 +4,7 @@ Project Name: Shortcut_keys
 File Created: 2024.06.26
 Author: ZhangYuetao
 File Name: macro_manage.py
-last renew 2024.06.27
+last renew 2024.06.28
 """
 
 from PyQt5.QtWidgets import QWidget, QInputDialog
@@ -60,6 +60,8 @@ class MacroCommandWindow(QWidget, Ui_Form):
                 key_text = 'Alt'
             elif key == QtCore.Qt.Key_Meta:
                 key_text = 'Meta'
+            elif 'A' <= key_text <= 'Z':
+                key_text = key_text.lower()
             if obj == self.output_lineEdit:
                 self.output_lineEdit.setText(key_text)
             return True
