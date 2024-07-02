@@ -4,7 +4,7 @@ Project Name: Shortcut_keys
 File Created: 2024.06.26
 Author: ZhangYuetao
 File Name: keys_insert.py
-last renew 2024.06.28
+last renew 2024.07.02
 """
 
 from PyQt5.QtWidgets import QDialog
@@ -15,15 +15,19 @@ from utils import read_json, write_json
 
 
 class InputDialog(QDialog, Ui_Dialog):
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, name=None, inputs=None, macro=None, enable=True):
         super(InputDialog, self).__init__(parent)
         self.setupUi(self)
         self.setWindowTitle("快捷键输入")
         self.setWindowIcon(QtGui.QIcon("xey.ico"))
 
-        self.inputs = None  # 输入快捷键组合
-        self.enable = True  # 默认启用选项
-        self.enable_checkBox.click()  # 默认启用选项
+        self.name = name
+        self.inputs = inputs  # 输入快捷键组合
+        self.macro = macro
+        self.enable = enable  # 默认启用选项
+        if self.enable:
+            self.enable_checkBox.click()  # 默认启用选项
+
         self.macro_json_path = r'settings/macros.json'  # 宏命令json文件路径
         self.keys_json_path = r'settings/keys.json'  # 快捷键json文件路径
         self.macro_name_comboBox.addItems(self.get_macro_name())
@@ -45,6 +49,11 @@ class InputDialog(QDialog, Ui_Dialog):
         self.input3_lineEdit.installEventFilter(self)
 
         self.parent = parent  # 保存父窗口引用
+
+        if self.macro:
+            self.macro_name_comboBox.setCurrentText(self.macro)
+        if self.inputs:
+            self.input_list_label.setText('原快捷键：' + self.inputs)
 
     # 处理键盘按键事件
     def eventFilter(self, obj, event):
@@ -119,16 +128,18 @@ class InputDialog(QDialog, Ui_Dialog):
 
         try:
             keys_data = read_json(self.keys_json_path, {})
-            i = 1
-            while f"快捷键_{i}" in keys_data:
-                i += 1
-            keys_data[f"快捷键_{i}"] = {
+            if self.name is None:
+                i = 1
+                while f"快捷键_{i}" in keys_data:
+                    i += 1
+                self.name = f"快捷键_{i}"
+            keys_data[self.name] = {
                 "input_keys": self.inputs,
                 "input_macro": self.macro_name_comboBox.currentText(),
                 "input_enable": self.enable
             }
             write_json(self.keys_json_path, keys_data)
-            self.info_label.setText(f'快捷键_{i} 保存成功')
+            self.info_label.setText(f'{self.name} 保存成功')
 
             if self.parent:
                 self.parent.load_keys()  # 调用父窗口的load_keys方法

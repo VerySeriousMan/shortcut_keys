@@ -4,6 +4,9 @@ __pycache__/
 *$py.class
 
 .idea
+.secret.toml
+keys.json
+macros.json
 
 # C extensions
 *.so

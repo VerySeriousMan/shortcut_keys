@@ -4,7 +4,7 @@ Project Name: Shortcut_keys
 File Created: 2024.06.26
 Author: ZhangYuetao
 File Name: working_thread.py
-last renew 2024.06.27
+last renew 2024.07.02
 """
 
 import time
@@ -20,9 +20,10 @@ class WorkerThread(QThread):
     update_error_label = pyqtSignal(str)
     thread_finished = pyqtSignal()  # 用于线程结束时通知主线程
 
-    def __init__(self, keys):
+    def __init__(self, keys, delay_time):
         super(WorkerThread, self).__init__()
         self.keys = keys
+        self.delay_time = float(delay_time)
         self.doing_done = False
         self.running = True
         self.macros_path = r'settings/macros.json'  # 宏命令json文件路径
@@ -33,8 +34,7 @@ class WorkerThread(QThread):
                 for key_name in self.keys.keys():
                     key = self.keys[key_name]
                     if key['input_enable'] is True:
-                        keyboard.add_hotkey(key['input_keys'], self.key_action(key['input_macro']))
-                        # print(f"input_keys=={key['input_keys']}-------input_macro=={key['input_macro']}")
+                        keyboard.add_hotkey(key['input_keys'], self.key_action(key['input_macro']), suppress=True)
                 self.update_info_label.emit('程序运行中')
 
                 while self.running:
@@ -51,16 +51,13 @@ class WorkerThread(QThread):
         def action():
             try:
                 macros = read_json(self.macros_path, {})
-                # print(f"macros=={macros}")
                 output_list = []
                 if macro in macros.keys():
                     for line in macros[macro]:
                         output_list.append(line)
-                # print(f"output_list=={output_list}")
 
                 outputs = '+'.join(output_list)
                 outputs = outputs.replace('+---', '---').replace('---+', '---')
-                # print(f"outputs=={outputs}")
 
                 if not self.doing_done and outputs:
                     self.doing_done = True
@@ -68,7 +65,6 @@ class WorkerThread(QThread):
                     for output_thing in output_things:
                         try:
                             if output_thing:
-                                # print(f"output_thing=={output_thing}")
                                 if output_thing.startswith("click"):
                                     button = output_thing.split('_')[1] if '_' in output_thing else 'left'
                                     pyautogui.click(button=button)
@@ -80,11 +76,14 @@ class WorkerThread(QThread):
                                         pyautogui.moveTo(int(x), int(y))
                                     except ValueError:
                                         self.update_error_label.emit(f"错误的鼠标移动命令: {output_thing}")
+                                elif output_thing.startswith("time"):
+                                    use_time = output_thing.split('_')[1]
+                                    time.sleep(float(use_time))
                                 else:
                                     keyboard.press_and_release(output_thing)
                         except Exception as e:
                             self.update_error_label.emit(f"错误的命令: {output_thing} ({str(e)})")
-                    time.sleep(0.1)  # 避免快速重复触发
+                    time.sleep(self.delay_time)  # 避免快速重复触发
                     self.doing_done = False
             except Exception as e:
                 self.update_error_label.emit(f"执行宏命令时出错: {str(e)}")

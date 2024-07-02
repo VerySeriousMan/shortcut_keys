@@ -4,7 +4,7 @@ Project Name: Shortcut_keys
 File Created: 2024.06.24
 Author: ZhangYuetao
 File Name: main.py
-last renew 2024.06.28
+last renew 2024.07.02
 """
 
 import os
@@ -31,13 +31,14 @@ is_linux = platform.system() == 'Linux'  # 检测用户操作系统
 sys.path.append(os.path.join(venv_path, 'lib', 'python3.10', 'site-packages'))
 
 if is_linux:
-    # 检查是否是以 root 身份运行
-    if os.geteuid() != 0:
-        # 如果不是 root，则重新运行脚本并以 root 用户身份执行
+    # 检查是否是以 root 身份运行并且是否已经重新运行过
+    if os.geteuid() != 0 and 'IS_RELAUNCHED' not in os.environ:
+        # 如果不是 root，并且没有重新运行过，则重新运行脚本并以 root 用户身份执行
         print("Switching to root user...")
-        command = f'echo {root_password} | sudo -S {sys.executable} ' + ' '.join(sys.argv)
+        os.environ['IS_RELAUNCHED'] = '1'
+        command = f'echo {root_password} | sudo -S env IS_RELAUNCHED=1 {sys.executable} ' + ' '.join(sys.argv)
         subprocess.call(command, shell=True)
-        sys.exit()
+        sys.exit(0)  # 退出当前进程，避免继续执行后续代码
 
     # 激活虚拟环境
     activate_script = os.path.join(venv_path, 'bin', 'activate_this.py')
@@ -55,11 +56,13 @@ class MyClass(QMainWindow, Ui_MainWindow):
     def __init__(self, parent=None):
         super(MyClass, self).__init__(parent)
         self.setupUi(self)
-        self.setWindowTitle("快捷键宏命令软件V1.0")
+        self.setWindowTitle("快捷键宏命令软件V1.1")
         self.setWindowIcon(QtGui.QIcon("xey.ico"))
 
         self.current_key = None
         self.keys = {}
+        self.delay_time = 0.1
+        self.delay_doubleSpinBox.setValue(0.10)
         self.macro_json_path = r'settings/macros.json'  # 宏命令json文件路径
         self.keys_json_path = r'settings/keys.json'  # 快捷键json文件路径
         self.macro_command_window = None
@@ -73,6 +76,7 @@ class MyClass(QMainWindow, Ui_MainWindow):
         self.close_pushButton.clicked.connect(self.close_program)
         self.open_macro_command_pushButton.clicked.connect(self.open_macro_command_window)
         self.insert_input_pushButton.clicked.connect(self.open_key_combo_window)
+        self.change_key_pushButton.clicked.connect(self.change_key_combo_window)
         self.delete_key_pushButton.clicked.connect(self.delete_key)
         self.key_name_listWidget.itemClicked.connect(self.display_key_info)
         self.change_enable_pushButton.clicked.connect(self.change_key_enable)
@@ -83,7 +87,8 @@ class MyClass(QMainWindow, Ui_MainWindow):
     def submit(self):
         if self.keys != {} and not self.is_running:
             self.error_label.clear()
-            self.worker_thread = WorkerThread(self.keys)
+            self.delay_time = self.delay_doubleSpinBox.text()
+            self.worker_thread = WorkerThread(self.keys, self.delay_time)
             self.worker_thread.update_info_label.connect(self.update_info_label)
             self.worker_thread.update_error_label.connect(self.update_error_label)
             self.worker_thread.thread_finished.connect(self.thread_finished)  # 连接线程结束信号
@@ -95,6 +100,8 @@ class MyClass(QMainWindow, Ui_MainWindow):
             self.delete_key_pushButton.setEnabled(False)
             self.change_enable_pushButton.setEnabled(False)
             self.open_macro_command_pushButton.setEnabled(False)
+            self.delay_doubleSpinBox.setEnabled(False)
+            self.change_key_pushButton.setEnabled(False)
         else:
             self.info_label.setText('快捷键为空')
 
@@ -116,6 +123,7 @@ class MyClass(QMainWindow, Ui_MainWindow):
         self.key_name_listWidget.clear()
         self.key_info_listWidget.clear()
         self.keys = read_json(self.keys_json_path, {})
+        self.get_right_keys()
         self.key_name_listWidget.addItems(self.keys.keys())
 
     def change_key_enable(self):
@@ -154,6 +162,27 @@ class MyClass(QMainWindow, Ui_MainWindow):
             if self.current_key == old_name:
                 self.current_key = new_name
 
+    def get_macro_name(self):
+        try:
+            macro_data = read_json(self.macro_json_path, {})
+            if isinstance(macro_data, dict):
+                return list(macro_data.keys())
+        except Exception as e:
+            self.error_label.setText(f"读取宏命令时出错: {str(e)}")
+        return []
+
+    def get_right_keys(self):
+        macro_names = self.get_macro_name()
+        keys_to_delete = []
+        for key_name in self.keys.keys():
+            if self.keys[key_name]['input_macro'] not in macro_names:
+                keys_to_delete.append(key_name)
+
+        for key_name in keys_to_delete:
+            del self.keys[key_name]
+
+        self.save_keys()
+
     def update_info_label(self, text):
         self.info_label.setText(text)
 
@@ -168,6 +197,8 @@ class MyClass(QMainWindow, Ui_MainWindow):
         self.delete_key_pushButton.setEnabled(True)
         self.change_enable_pushButton.setEnabled(True)
         self.open_macro_command_pushButton.setEnabled(True)
+        self.delay_doubleSpinBox.setEnabled(True)
+        self.change_key_pushButton.setEnabled(True)
 
     def close_program(self):
         if self.worker_thread:
@@ -179,6 +210,7 @@ class MyClass(QMainWindow, Ui_MainWindow):
 
     def open_macro_command_window(self):
         self.macro_command_window = MacroCommandWindow()
+        self.macro_command_window.closed.connect(self.load_keys)  # 连接 closed 信号到 load_keys
         self.macro_command_window.show()
 
     def open_key_combo_window(self):
@@ -188,6 +220,20 @@ class MyClass(QMainWindow, Ui_MainWindow):
             self.key_combo_window.finished.connect(self.set_key_combo_window_closed)
             self.is_key_combo_window_open = True
             self.key_combo_window.show()
+
+    def change_key_combo_window(self):
+        if not self.is_key_combo_window_open:
+            current_item = self.key_name_listWidget.currentItem()
+            if current_item:
+                key_name = current_item.text()
+                inputs = self.keys[key_name].get("input_keys", "")
+                macro = self.keys[key_name].get("input_macro", "")
+                enable = self.keys[key_name].get("input_enable", "")
+                self.key_combo_window = InputDialog(parent=self, name=key_name, inputs=inputs, macro=macro, enable=enable)
+                self.key_combo_window.finished.connect(self.load_keys)
+                self.key_combo_window.finished.connect(self.set_key_combo_window_closed)
+                self.is_key_combo_window_open = True
+                self.key_combo_window.show()
 
     def set_key_combo_window_closed(self):
         self.is_key_combo_window_open = False

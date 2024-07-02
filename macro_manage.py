@@ -4,17 +4,21 @@ Project Name: Shortcut_keys
 File Created: 2024.06.26
 Author: ZhangYuetao
 File Name: macro_manage.py
-last renew 2024.06.28
+last renew 2024.07.02
 """
 
 from PyQt5.QtWidgets import QWidget, QInputDialog
 from PyQt5 import QtGui, QtCore
+from PyQt5.QtCore import pyqtSignal
 
 from macro_command import Ui_Form
 from utils import read_json, write_json
 
 
 class MacroCommandWindow(QWidget, Ui_Form):
+
+    closed = pyqtSignal()  # 定义关闭信号
+
     def __init__(self, parent=None):
         super(MacroCommandWindow, self).__init__(parent)
         self.setupUi(self)
@@ -24,6 +28,7 @@ class MacroCommandWindow(QWidget, Ui_Form):
         self.insert_output_keyboard_pushButton.clicked.connect(self.insert_output_line)
         self.insert_output_mouse_pushButton.clicked.connect(self.insert_output_box)
         self.cut_output_pushButton.clicked.connect(self.cut_output_line)
+        self.time_pushButton.clicked.connect(self.insert_output_time)
         self.delete_output_pushButton.clicked.connect(self.delete_output_line)
         self.delete_all_outputs_pushButton.clicked.connect(self.delete_all_outputs)
         self.new_macro_pushButton.clicked.connect(self.new_macro)
@@ -93,6 +98,16 @@ class MacroCommandWindow(QWidget, Ui_Form):
             self.macros[self.current_macro].append('---')
             self.macro_command_listWidget.addItem('---')
             self.save_macros()
+
+    def insert_output_time(self):
+        if self.current_macro:
+            add_time = 'time_' + self.time_doubleSpinBox.text()
+            self.macro_command_listWidget.addItem('---')
+            self.macros[self.current_macro].append('---')
+            self.macros[self.current_macro].append(add_time)
+            self.macro_command_listWidget.addItem(add_time)
+            self.macro_command_listWidget.addItem('---')
+            self.macros[self.current_macro].append('---')
 
     def delete_output_line(self):
         current_item = self.macro_command_listWidget.currentItem()
@@ -170,3 +185,7 @@ class MacroCommandWindow(QWidget, Ui_Form):
     def load_macros(self):
         self.macros = read_json(self.file_path, {})
         self.macro_list_listWidget.addItems(self.macros.keys())
+
+    def closeEvent(self, event):
+        self.closed.emit()  # 关闭窗口时发出信号
+        super(MacroCommandWindow, self).closeEvent(event)
