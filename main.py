@@ -4,59 +4,35 @@ Project Name: Shortcut_keys
 File Created: 2024.06.24
 Author: ZhangYuetao
 File Name: main.py
-last renew 2024.07.02
+last renew 2024.07.05
 """
 
-import os
 import sys
 import platform
-import subprocess
 
 from PyQt5.QtWidgets import QApplication, QMainWindow, QInputDialog
-from PyQt5 import QtGui
+from PyQt5 import QtGui, QtCore
 import qt_material
+import keyboard
 
-import config
 from shortcut_keys import Ui_MainWindow
 from macro_manage import MacroCommandWindow
 from working_thread import WorkerThread
 from keys_insert import InputDialog
 from utils import read_json, write_json
+from system_init import linux_init
 
-config_data = config.load_config()
 
-venv_path = config_data['venv_path']
-root_password = config_data['root_password']
-is_linux = platform.system() == 'Linux'  # 检测用户操作系统
-sys.path.append(os.path.join(venv_path, 'lib', 'python3.10', 'site-packages'))
-
-if is_linux:
-    # 检查是否是以 root 身份运行并且是否已经重新运行过
-    if os.geteuid() != 0 and 'IS_RELAUNCHED' not in os.environ:
-        # 如果不是 root，并且没有重新运行过，则重新运行脚本并以 root 用户身份执行
-        print("Switching to root user...")
-        os.environ['IS_RELAUNCHED'] = '1'
-        command = f'echo {root_password} | sudo -S env IS_RELAUNCHED=1 {sys.executable} ' + ' '.join(sys.argv)
-        subprocess.call(command, shell=True)
-        sys.exit(0)  # 退出当前进程，避免继续执行后续代码
-
-    # 激活虚拟环境
-    activate_script = os.path.join(venv_path, 'bin', 'activate_this.py')
-    if os.path.exists(activate_script):
-        exec(open(activate_script).read(), {'__file__': activate_script})
-        # 给root用户赋予图形界面操作权限
-        xhost_command = 'xhost +SI:localuser:root'
-        subprocess.run(xhost_command, shell=True, check=True)
-    else:
-        print(f"Could not find the virtual environment activation script at {activate_script}")
-        sys.exit(1)
+if platform.system() == 'Linux':  # 检测用户操作系统
+    linux_init()
 
 
 class MyClass(QMainWindow, Ui_MainWindow):
     def __init__(self, parent=None):
         super(MyClass, self).__init__(parent)
+
         self.setupUi(self)
-        self.setWindowTitle("快捷键宏命令软件V1.1")
+        self.setWindowTitle("快捷键宏命令软件V1.1.1")
         self.setWindowIcon(QtGui.QIcon("xey.ico"))
 
         self.current_key = None
@@ -102,6 +78,11 @@ class MyClass(QMainWindow, Ui_MainWindow):
             self.open_macro_command_pushButton.setEnabled(False)
             self.delay_doubleSpinBox.setEnabled(False)
             self.change_key_pushButton.setEnabled(False)
+            # 关闭子界面
+            if self.macro_command_window:
+                self.macro_command_window.close()
+            if self.key_combo_window:
+                self.key_combo_window.close()
         else:
             self.info_label.setText('快捷键为空')
 
@@ -131,8 +112,7 @@ class MyClass(QMainWindow, Ui_MainWindow):
         if current_item:
             key_name = current_item.text()
             if key_name in self.keys:
-                # 切换 enable 状态
-                self.keys[key_name]['input_enable'] = not self.keys[key_name]['input_enable']
+                self.keys[key_name]['input_enable'] = not self.keys[key_name]['input_enable']  # 切换 enable 状态
                 self.save_keys()
                 self.display_key_info(current_item)
                 self.error_label.clear()
@@ -191,6 +171,7 @@ class MyClass(QMainWindow, Ui_MainWindow):
 
     def thread_finished(self):
         self.is_running = False  # 重置标志
+        self.worker_thread = None
         # 启用按钮
         self.submit_pushButton.setEnabled(True)
         self.insert_input_pushButton.setEnabled(True)
@@ -204,8 +185,7 @@ class MyClass(QMainWindow, Ui_MainWindow):
         if self.worker_thread:
             self.worker_thread.stop()
             self.worker_thread.wait()  # 等待线程完全停止
-        if self.macro_command_window:
-            self.macro_command_window.close()
+            self.worker_thread = None  # 删除工作线程对象
         self.info_label.setText('程序已关闭')
 
     def open_macro_command_window(self):
@@ -215,7 +195,7 @@ class MyClass(QMainWindow, Ui_MainWindow):
 
     def open_key_combo_window(self):
         if not self.is_key_combo_window_open:
-            self.key_combo_window = InputDialog(parent=self)  # 传递父窗口引用
+            self.key_combo_window = InputDialog(parent=self, opened='insert')  # 传递父窗口引用
             self.key_combo_window.finished.connect(self.load_keys)
             self.key_combo_window.finished.connect(self.set_key_combo_window_closed)
             self.is_key_combo_window_open = True
@@ -229,7 +209,7 @@ class MyClass(QMainWindow, Ui_MainWindow):
                 inputs = self.keys[key_name].get("input_keys", "")
                 macro = self.keys[key_name].get("input_macro", "")
                 enable = self.keys[key_name].get("input_enable", "")
-                self.key_combo_window = InputDialog(parent=self, name=key_name, inputs=inputs, macro=macro, enable=enable)
+                self.key_combo_window = InputDialog(parent=self, name=key_name, inputs=inputs, macro=macro, enable=enable, opened='change')
                 self.key_combo_window.finished.connect(self.load_keys)
                 self.key_combo_window.finished.connect(self.set_key_combo_window_closed)
                 self.is_key_combo_window_open = True
@@ -240,12 +220,21 @@ class MyClass(QMainWindow, Ui_MainWindow):
 
     def closeEvent(self, event):
         self.close_program()
+        if self.macro_command_window:
+            self.macro_command_window.close()
         event.accept()
+
+    def eventFilter(self, source, event):
+        if event.type() == QtCore.QEvent.ApplicationActivate:
+            # keyboard包bug，按下win+l锁屏后，只检测到win+l键按下，没检测到放开，所以系统恢复后先清楚残余按键表
+            keyboard._pressed_events.clear()
+        return super(MyClass, self).eventFilter(source, event)
 
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     myWin = MyClass()
     qt_material.apply_stylesheet(app, theme='default')
+    app.installEventFilter(myWin)  # 添加事件过滤器捕获系统恢复
     myWin.show()
     sys.exit(app.exec_())

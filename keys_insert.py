@@ -4,7 +4,7 @@ Project Name: Shortcut_keys
 File Created: 2024.06.26
 Author: ZhangYuetao
 File Name: keys_insert.py
-last renew 2024.07.02
+last renew 2024.07.05
 """
 
 from PyQt5.QtWidgets import QDialog
@@ -15,7 +15,7 @@ from utils import read_json, write_json
 
 
 class InputDialog(QDialog, Ui_Dialog):
-    def __init__(self, parent=None, name=None, inputs=None, macro=None, enable=True):
+    def __init__(self, parent=None, name=None, inputs=None, macro=None, enable=True, opened=None):
         super(InputDialog, self).__init__(parent)
         self.setupUi(self)
         self.setWindowTitle("快捷键输入")
@@ -25,6 +25,7 @@ class InputDialog(QDialog, Ui_Dialog):
         self.inputs = inputs  # 输入快捷键组合
         self.macro = macro
         self.enable = enable  # 默认启用选项
+        self.opened = opened
         if self.enable:
             self.enable_checkBox.click()  # 默认启用选项
 
@@ -67,7 +68,7 @@ class InputDialog(QDialog, Ui_Dialog):
             elif key == QtCore.Qt.Key_Alt:
                 key_text = 'Alt'
             elif key == QtCore.Qt.Key_Meta:
-                key_text = 'Meta'
+                key_text = 'Windows'
             elif 'A' <= key_text <= 'Z':
                 key_text = key_text.lower()
             if obj == self.input1_lineEdit:
@@ -128,7 +129,7 @@ class InputDialog(QDialog, Ui_Dialog):
 
         try:
             keys_data = read_json(self.keys_json_path, {})
-            if self.name is None:
+            if self.opened == 'insert':
                 i = 1
                 while f"快捷键_{i}" in keys_data:
                     i += 1
