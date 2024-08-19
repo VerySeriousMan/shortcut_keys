@@ -4,7 +4,7 @@ Project Name: Shortcut_keys
 File Created: 2024.06.24
 Author: ZhangYuetao
 File Name: main.py
-last renew 2024.07.05
+last renew 2024.08.19
 """
 
 import sys
@@ -32,7 +32,7 @@ class MyClass(QMainWindow, Ui_MainWindow):
         super(MyClass, self).__init__(parent)
 
         self.setupUi(self)
-        self.setWindowTitle("快捷键宏命令软件V1.1.1")
+        self.setWindowTitle("快捷键宏命令软件V1.1.2")
         self.setWindowIcon(QtGui.QIcon("xey.ico"))
 
         self.current_key = None
@@ -232,6 +232,8 @@ class MyClass(QMainWindow, Ui_MainWindow):
 
 
 if __name__ == "__main__":
+    QApplication.setAttribute(QtCore.Qt.AA_EnableHighDpiScaling)  # 自适应适配不同分辨率
+    QApplication.setAttribute(QtCore.Qt.AA_UseHighDpiPixmaps)
     app = QApplication(sys.argv)
     myWin = MyClass()
     qt_material.apply_stylesheet(app, theme='default')
