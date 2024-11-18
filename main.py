@@ -4,13 +4,17 @@ Project Name: Shortcut_keys
 File Created: 2024.06.24
 Author: ZhangYuetao
 File Name: main.py
-last renew 2024.08.19
+last renew 2024.11.18
 """
 
+import os.path
+import subprocess
+import time
 import sys
+import shutil
 import platform
 
-from PyQt5.QtWidgets import QApplication, QMainWindow, QInputDialog
+from PyQt5.QtWidgets import QApplication, QMainWindow, QInputDialog, QMessageBox
 from PyQt5 import QtGui, QtCore
 import qt_material
 import keyboard
@@ -21,6 +25,7 @@ from working_thread import WorkerThread
 from keys_insert import InputDialog
 from utils import read_json, write_json
 from system_init import linux_init
+import server_connect
 
 
 if platform.system() == 'Linux':  # 检测用户操作系统
@@ -32,13 +37,15 @@ class MyClass(QMainWindow, Ui_MainWindow):
         super(MyClass, self).__init__(parent)
 
         self.setupUi(self)
-        self.setWindowTitle("快捷键宏命令软件V1.1.2")
+        self.setWindowTitle("快捷键宏命令软件V1.2")
         self.setWindowIcon(QtGui.QIcon("xey.ico"))
 
         self.current_key = None
         self.keys = {}
         self.delay_time = 0.1
         self.delay_doubleSpinBox.setValue(0.10)
+        self.current_software_path = self.get_file_path()
+        self.current_software_version = server_connect.get_current_software_version(self.current_software_path)
         self.macro_json_path = r'settings/macros.json'  # 宏命令json文件路径
         self.keys_json_path = r'settings/keys.json'  # 快捷键json文件路径
         self.macro_command_window = None
@@ -57,8 +64,90 @@ class MyClass(QMainWindow, Ui_MainWindow):
         self.key_name_listWidget.itemClicked.connect(self.display_key_info)
         self.change_enable_pushButton.clicked.connect(self.change_key_enable)
         self.key_name_listWidget.itemDoubleClicked.connect(self.rename_key)
+        self.software_update_action.triggered.connect(self.update_software)
 
         self.load_keys()
+        self.auto_update()
+        self.init_update()
+
+    def init_update(self):
+        dir_path = os.path.dirname(self.current_software_path)
+        dir_name = os.path.basename(dir_path)
+        if dir_name == 'temp':
+            old_dir_path = os.path.dirname(dir_path)
+            for file in os.listdir(old_dir_path):
+                if file.endswith('.exe'):
+                    old_software = os.path.join(old_dir_path, file)
+                    os.remove(old_software)
+            shutil.copy2(self.current_software_path, old_dir_path)
+            new_file_path = os.path.join(old_dir_path, os.path.basename(self.current_software_path))
+            if os.path.exists(new_file_path) and server_connect.is_file_complete(new_file_path):
+                msg_box = QMessageBox(self)  # 创建一个新的 QMessageBox 对象
+                reply = msg_box.question(self, '更新完成', '软件更新完成，需要立即重启吗？',
+                                         QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+                msg_box.raise_()  # 确保弹窗显示在最上层
+
+                if reply == QMessageBox.Yes:
+                    subprocess.Popen(new_file_path)
+                    time.sleep(1)
+                    sys.exit("程序已退出")
+                else:
+                    sys.exit("程序已退出")
+        else:
+            is_updated = 0
+            for file in os.listdir(dir_path):
+                if file == 'temp':
+                    is_updated = 1
+                    shutil.rmtree(file)
+            if is_updated == 1:
+                try:
+                    text = server_connect.get_update_log('快捷键宏命令软件')
+                    QMessageBox.information(self, '更新成功', f'更新成功！\n{text}')
+                except Exception as e:
+                    QMessageBox.critical(self, '更新成功', f'日志加载失败: {str(e)}')
+
+    @staticmethod
+    def get_file_path():
+        # 检查是否是打包后的程序
+        if getattr(sys, 'frozen', False):
+            # PyInstaller 打包后的路径
+            current_path = os.path.abspath(sys.argv[0])
+        else:
+            # 非打包情况下的路径
+            current_path = os.path.abspath(__file__)
+        return current_path
+
+    def auto_update(self):
+        dir_path = os.path.dirname(self.current_software_path)
+        dir_name = os.path.basename(dir_path)
+        if dir_name != 'temp':
+            if server_connect.check_version(self.current_software_version) == 1:
+                self.update_software()
+
+    def update_software(self):
+        update_way = server_connect.check_version(self.current_software_version)
+        if update_way == -1:
+            # 网络未连接，弹出提示框
+            QMessageBox.warning(self, '更新提示', '网络未连接，暂时无法更新')
+        elif update_way == 0:
+            # 当前已为最新版本，弹出提示框
+            QMessageBox.information(self, '更新提示', '当前已为最新版本')
+        else:
+            # 弹出提示框，询问是否立即更新
+            msg_box = QMessageBox(self)  # 创建一个新的 QMessageBox 对象
+            reply = msg_box.question(self, '更新提示', '发现新版本，开始更新吗？',
+                                     QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+            msg_box.raise_()  # 确保弹窗显示在最上层
+
+            if reply == QMessageBox.Yes:
+                try:
+                    server_connect.update_software(os.path.dirname(self.current_software_path), '快捷键宏命令软件')
+                    text = server_connect.get_update_log('快捷键宏命令软件')
+                    QMessageBox.information(self, '更新成功', f'更新成功！\n{text}')
+                except Exception as e:
+                    QMessageBox.critical(self, '更新失败', f'更新失败: {str(e)}')
+            else:
+                pass
 
     def submit(self):
         if self.keys != {} and not self.is_running:

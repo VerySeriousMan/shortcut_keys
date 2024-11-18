@@ -13,7 +13,11 @@ import toml
 # 定义默认参数值
 DEFAULT_CONFIG = {
     'venv_path': None,
-    'root_password': None
+    'root_password': None,
+    'server_ip': "10.0.1.206",
+    'share_name': "public_intern",
+    'username': "samba_intern",
+    'password': "cnNa2Z"
 }
 
 CONFIG_FILE = r'settings/.secret.toml'
