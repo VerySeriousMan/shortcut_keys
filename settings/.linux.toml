@@ -1,0 +1,2 @@
+venv_path = "xxx"  # 替换为你的虚拟环境路径
+root_password = "xxx"  # 替换为你的 root 密码
