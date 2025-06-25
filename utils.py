@@ -4,7 +4,7 @@ Project Name: shortcut_keys
 File Created: 2024.06.27
 Author: ZhangYuetao
 File Name: utils.py
-Update: 2025.04.24
+Update: 2025.06.25
 """
 
 import os
@@ -40,17 +40,14 @@ def write_json(file_path, data):
         json.dump(data, file, ensure_ascii=False, indent=4)
 
 
-def get_file_path():
+def get_current_software_path():
     """
-    获取当前文件的路径，支持打包后的程序和非打包情况。
+    获取当前软件的可执行文件路径。
 
-    :return: 当前文件的路径。
+    :return: 当前软件的可执行文件路径。
     """
     # 检查是否是打包后的程序
     if getattr(sys, 'frozen', False):
         # PyInstaller 打包后的路径
-        current_path = os.path.abspath(sys.argv[0])
-    else:
-        # 非打包情况下的路径
-        current_path = os.path.abspath(__file__)
-    return current_path
+        return os.path.abspath(sys.argv[0])
+    return os.path.join(os.path.dirname(os.path.abspath(__file__)), 'main.py')

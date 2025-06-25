@@ -4,21 +4,16 @@ Project Name: shortcut_keys
 File Created: 2024.06.28
 Author: ZhangYuetao
 File Name: config.py
-Update: 2025.06.24
+Update: 2025.06.25
 """
 
 import os
 import toml
 
-# 定义默认参数值
-LINUX_DEFAULT_CONFIG = {
-    'venv_path': None,
-    'root_password': None,
-}
-
 SECRET_FILE = r'settings/.secret.toml'
 LINUX_CONFIG_FILE = r'settings/.linux.toml'
 SOFTWARE_INFOS_FILE = r'settings/software_infos.toml'
+QT_MATERIAL_THEME_FILE = r'settings/qt_material_theme.toml'
 
 ICO_FILE = r'settings/xey.ico'
 
@@ -26,9 +21,19 @@ MACRO_FILE = r'settings/macros.json'  # 宏命令json文件路径
 KEYS_FILE = r'settings/keys.json'  # 快捷键json文件路径
 
 SOFTWARE_NAME = "快捷键宏命令软件"
-SHARE_DIR = r""  # 你的服务器上的软件文件夹地址
-PROBLEM_SHARE_DIR = r""  # 你的服务器上的问题反馈文件夹地址
+SHARE_DIR = ""  # 你的服务器上的软件文件夹地址
+PROBLEM_SHARE_DIR = ""  # 你的服务器上的问题反馈文件夹地址
 
+# 定义默认参数值
+LINUX_DEFAULT_CONFIG = {
+    'venv_path': None,
+    'root_password': None,
+    'python_verison': None
+}
+
+QT_MATERIAL_THEME_DEFAULT_CONFIG = {
+    'theme': 'default',
+}
 
 def load_config(filepath, default):
     """

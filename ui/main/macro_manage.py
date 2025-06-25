@@ -4,7 +4,7 @@ Project Name: shortcut_keys
 File Created: 2024.06.26
 Author: ZhangYuetao
 File Name: macro_manage.py
-Update: 2025.04.24
+Update: 2025.06.25
 """
 
 from PyQt5.QtWidgets import QWidget, QInputDialog
@@ -39,6 +39,10 @@ class MacroCommandWindow(QWidget, Ui_Form):
         self.setupUi(self)
         self.setWindowTitle("宏命令管理")
         self.setWindowIcon(QtGui.QIcon(config.ICO_FILE))
+        
+        self.output_list = []
+        self.macros = {}  # 存储宏命令及其操作
+        self.current_macro = None
 
         # 连接按钮信号与槽函数
         self.insert_output_keyboard_pushButton.clicked.connect(self.insert_output_line)
@@ -59,10 +63,6 @@ class MacroCommandWindow(QWidget, Ui_Form):
         self.output_lineEdit.setReadOnly(True)
         # 安装事件过滤器
         self.output_lineEdit.installEventFilter(self)
-
-        self.output_list = []
-        self.macros = {}  # 存储宏命令及其操作
-        self.current_macro = None
         self.mouse_comboBox.addItems(['click_right', 'click_left', 'click_middle',
                                       'double_click', 'scroll_up', 'scroll_down'])
 

@@ -4,7 +4,7 @@ Project Name: shortcut_keys
 File Created: 2024.07.05
 Author: ZhangYuetao
 File Name: system_init.py
-Update: 2025.06.24
+Update: 2025.06.25
 """
 
 import os
@@ -22,8 +22,9 @@ def linux_init():
 
     venv_path = config_data['venv_path']
     root_password = config_data['root_password']
+    python_verison = config_data['python_verison']
 
-    sys.path.append(os.path.join(venv_path, 'lib', 'python3.10', 'site-packages'))
+    sys.path.append(os.path.join(venv_path, 'lib', python_verison, 'site-packages'))
 
     # 检查是否是以 root 身份运行并且是否已经重新运行过
     if os.geteuid() != 0 and 'IS_RELAUNCHED' not in os.environ:

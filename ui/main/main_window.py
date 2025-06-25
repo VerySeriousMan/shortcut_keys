@@ -4,7 +4,7 @@ Project Name: shortcut_keys
 File Created: 2025.04.24
 Author: ZhangYuetao
 File Name: main_window.py
-Update: 2025.04.24
+Update: 2025.06.25
 """
 
 import platform
@@ -38,14 +38,13 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         delay_time (float): 快捷键执行的延迟时间。
         current_software_path (str): 当前软件的路径。
         current_software_version (str): 当前软件的版本号。
-        macro_json_path (str): 宏命令配置文件的路径。
-        keys_json_path (str): 快捷键配置文件的路径。
+        updater(Updater): 自动更新类。
         macro_command_window (MacroCommandWindow): 宏命令管理窗口。
         key_combo_window (InputDialog): 快捷键输入窗口。
-        is_key_combo_window_open (bool): 标志快捷键输入窗口是否已打开。
         worker_thread (WorkerThread): 工作线程，用于执行快捷键宏命令。
-        feedback_window (FeedbackWindow): 问题反馈窗口对象。
         is_running (bool): 标志工作线程是否正在运行。
+        feedback_window (FeedbackWindow): 问题反馈窗口对象。
+        is_key_combo_window_open (bool): 标志快捷键输入窗口是否已打开。
     """
 
     def __init__(self, window_title, parent=None):
@@ -64,13 +63,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.current_key = None
         self.keys = {}
         self.delay_time = 0.1
-        self.delay_doubleSpinBox.setValue(0.10)
-        self.macro_json_path = config.MACRO_FILE  # 宏命令json文件路径
-        self.keys_json_path = config.KEYS_FILE  # 快捷键json文件路径
-        self.current_software_path = utils.get_file_path()
+        self.current_software_path = utils.get_current_software_path()
         self.current_software_version = server_connect.get_current_software_version(self.current_software_path)
+        
         self.updater = Updater(self.current_software_path, self.current_software_version)
-
         self.macro_command_window = None
         self.key_combo_window = None
         self.worker_thread = None  # 工作线程
@@ -91,10 +87,12 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.software_update_action.triggered.connect(self.updater.update_software)
         self.problem_feedback_action.triggered.connect(self.feedback_problem)
 
-        # 加载快捷键配置并初始化更新
-        self.load_keys()
         self.updater.auto_update()
         self.updater.init_update()
+        
+        # 加载快捷键配置
+        self.delay_doubleSpinBox.setValue(0.10)
+        self.load_keys()
 
     def feedback_problem(self):
         """
@@ -152,7 +150,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         """
         保存快捷键配置到 JSON 文件。
         """
-        utils.write_json(self.keys_json_path, self.keys)
+        utils.write_json(config.KEYS_FILE, self.keys)
 
     def load_keys(self):
         """
@@ -160,7 +158,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         """
         self.key_name_listWidget.clear()
         self.key_info_listWidget.clear()
-        self.keys = utils.read_json(self.keys_json_path, {})
+        self.keys = utils.read_json(config.KEYS_FILE, {})
         self.get_right_keys()
         self.key_name_listWidget.addItems(self.keys.keys())
 
@@ -219,7 +217,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         :return: 宏命令名称列表。
         """
         try:
-            macro_data = utils.read_json(self.macro_json_path, {})
+            macro_data = utils.read_json(config.MACRO_FILE, {})
             if isinstance(macro_data, dict):
                 return list(macro_data.keys())
         except Exception as e:

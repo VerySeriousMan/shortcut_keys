@@ -4,7 +4,7 @@ Project Name: shortcut_keys
 File Created: 2024.06.26
 Author: ZhangYuetao
 File Name: keys_insert.py
-Update: 2025.04.24
+Update: 2025.06.25
 """
 
 from PyQt5.QtWidgets import QDialog
@@ -49,11 +49,9 @@ class InputDialog(QDialog, Ui_Dialog):
         self.macro = macro
         self.enable = enable  # 默认启用选项
         self.opened = opened
-        if self.enable:
-            self.enable_checkBox.click()  # 默认启用选项
-
-        self.macro_name_comboBox.addItems(self.get_macro_name())
-
+        
+        self.parent = parent  # 保存父窗口引用
+        
         # 连接按钮信号与槽函数
         self.buttonBox.accepted.connect(self.return_accept)
         self.buttonBox.rejected.connect(self.reject)
@@ -70,9 +68,11 @@ class InputDialog(QDialog, Ui_Dialog):
         self.input1_lineEdit.installEventFilter(self)
         self.input2_lineEdit.installEventFilter(self)
         self.input3_lineEdit.installEventFilter(self)
+        
+        self.macro_name_comboBox.addItems(self.get_macro_name())
 
-        self.parent = parent  # 保存父窗口引用
-
+        if self.enable:
+            self.enable_checkBox.click()  # 默认启用选项
         if self.macro:
             self.macro_name_comboBox.setCurrentText(self.macro)
         if self.inputs:

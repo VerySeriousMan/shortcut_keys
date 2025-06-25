@@ -4,7 +4,7 @@ Project Name: shortcut_keys
 File Created: 2025.04.24
 Author: ZhangYuetao
 File Name: feedback_main.py
-Update: 2025.04.24
+Update: 2025.06.25
 """
 
 from PyQt5.QtWidgets import QWidget
@@ -35,13 +35,14 @@ class FeedbackWindow(QWidget, Ui_Form):
         self.setWindowIcon(QtGui.QIcon(config.ICO_FILE))
 
         self.problem_type = 'bug'
-        self.bug_checkBox.click()
 
         # 连接信号与槽
         self.bug_checkBox.clicked.connect(self.process_bug_checkbox)
         self.suggestion_checkBox.clicked.connect(self.process_suggestion_checkbox)
         self.submit_pushButton.clicked.connect(self.submit)
         self.write_textEdit.textChanged.connect(self.info_label.clear)
+        
+        self.bug_checkBox.click()
 
     def process_bug_checkbox(self):
         """
